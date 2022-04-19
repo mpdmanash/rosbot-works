@@ -15,6 +15,7 @@ class AprilTag:
     p2: np.ndarray
     p3: np.ndarray
     p4: np.ndarray
+    angle: float=0.0
 
 
 # Positions (multiples of 4 bytes) , and Length in bytes
@@ -44,12 +45,15 @@ g_R = np.eye(3)
 g_t = np.zeros((3,))
 
 # Tag to 3D associations
-g_associations = {3: (0,0,0.025),
-                  2: (1.2,0.0,0.125),
-                  4: (1.2,0.6,0.06),
-                  1: (0.6,0.6,0.1)}
+# g_associations = {3: (0,0,0.025),
+#                   2: (1.2,0.0,0.125),
+#                   4: (1.2,0.6,0.06),
+#                   1: (0.6,0.6,0.1)}
 
-
+g_associations = {5: (0,0,0.12),
+                  2: (1.2,0.6,0.125),
+                  4: (0.6,0.6,0.06),
+                  1: (0.6,0.0,0.1)}
 
 
 def umeyama(P, Q):
@@ -101,7 +105,7 @@ def process_apriltag_msg(hex_string):
     if(len(hex_string)>48): # April Tag Detected
 
         without_header = hex_string[48:]
-        print("Tags detected:", len(without_header)/(2*88))
+        print "Tags detected:", len(without_header)/(2*88)
         for i in range(int(len(without_header)/(2*88))):
             tag_string = without_header[i*88*2:(i+1)*88*2]
             tag_id = int(read_part(tag_string, p_id), 16)
@@ -150,13 +154,20 @@ def calibrate_AprilTags(atags : List[AprilTag]):
 def localize_AprilTags(atags : List[AprilTag]):
     for atag in atags:
         if atag.id not in g_associations:
-            center = transformNscale3D(g_s,g_R,g_t,atag.center)
-            print(atag.id, center)
+            atag.center = transformNscale3D(g_s,g_R,g_t,atag.center)
+            atag.p1 = transformNscale3D(g_s,g_R,g_t,atag.p1)
+            atag.p2 = transformNscale3D(g_s,g_R,g_t,atag.p2)
+            atag.p3 = transformNscale3D(g_s,g_R,g_t,atag.p3)
+            atag.p4 = transformNscale3D(g_s,g_R,g_t,atag.p4)
+            D = atag.p3-atag.p2
+            atag.angle = np.arccos(D[0]/np.linalg.norm(D))*180.0/np.pi
+            print atag.angle, atag.center 
+
 
 
 def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('192.168.29.173', 7709))
+    server_socket.bind(('192.168.128.119', 7709))
     while True:
         message, address = server_socket.recvfrom(5*112)
         byte_array = bytearray(message)
