@@ -2,7 +2,9 @@ import random
 import socket
 from ctypes import *
 import numpy as np
-
+import binascii
+import rospy
+from geometry_msgs.msg import Pose2D
 
 class AprilTag:
     def __init__(self, id, center, p1, p2, p3, p4):
@@ -52,10 +54,13 @@ g_t = np.zeros((3,))
 #                   4: (1.2,0.6,0.06),
 #                   1: (0.6,0.6,0.1)}
 
-g_associations = {5: (0,0,0.12),
-                  2: (1.2,0.6,0.125),
-                  4: (0.6,0.6,0.06),
-                  1: (0.6,0.0,0.1)}
+ud = 0.6
+g_associations = {5: np.array([  0.0,0.0, 0.12/ud  ])*ud,
+                  2: np.array([  2.0,-2.0, 0.125/ud  ])*ud,
+                  4: np.array([  1.0,-2.0, 0.06/ud  ])*ud,
+                  1: np.array([  3.0,1.0, 0.1/ud  ])*ud}
+
+g_pub = rospy.Publisher('atagpose', Pose2D, queue_size=1)
 
 
 def umeyama(P, Q):
@@ -155,24 +160,28 @@ def calibrate_AprilTags(atags):
 
 def localize_AprilTags(atags):
     for atag in atags:
-        if atag.id not in g_associations:
+        if atag.id not in g_associations and atag.id==3:
             atag.center = transformNscale3D(g_s,g_R,g_t,atag.center)
             atag.p1 = transformNscale3D(g_s,g_R,g_t,atag.p1)
             atag.p2 = transformNscale3D(g_s,g_R,g_t,atag.p2)
             atag.p3 = transformNscale3D(g_s,g_R,g_t,atag.p3)
             atag.p4 = transformNscale3D(g_s,g_R,g_t,atag.p4)
             atag.computeAngle()
+            msg = Pose2D(atag.center[0], atag.center[1], atag.angle)
+            g_pub.publish(msg)
             print atag.angle, atag.center 
 
 
 
 def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('192.168.29.173', 7709))
+    server_socket.bind(('192.168.10.119', 7709))
+    rospy.init_node('ataglocalizer', anonymous=True)
     while True:
         message, address = server_socket.recvfrom(5*112)
         byte_array = bytearray(message)
-        hexadecimal_string = byte_array.hex()
+        hexadecimal_string = binascii.hexlify(byte_array)
+	# print(len(hexadecimal_string))
         atags = process_apriltag_msg(hexadecimal_string)
         calibrate_AprilTags(atags)
         localize_AprilTags(atags)
