@@ -6,6 +6,7 @@ import numpy as np
 import binascii
 import rospy
 import tf
+import time
 from geometry_msgs.msg import Pose2D
 from scipy.spatial.transform import Rotation
 
@@ -17,10 +18,14 @@ class AprilTag:
         self.angle = 0.0
 
     def getWPose2D(self,wR,wT):
-        wC = np.dot(wR, self.center.reshape((3,1))) + wT
-        wR = Rotation.from_dcm(np.dot(wR, Rotation.from_quat(self.quat).as_dcm())).as_euler('zyx', degrees=True)
-        print(wR)
-        # return wC[0], wC[1], wR[2]
+        Rtc = Rotation.from_quat(self.quat).as_dcm()
+        Rcw = wR
+        Rtw = np.dot(Rcw,Rtc)
+        dw = np.dot(Rtw, np.array([[0.0],[-1.0],[0.0]]))
+        self.angle = -np.arctan2(-dw[1,0],dw[0,0])*180.0/np.pi
+        wc = np.dot(Rcw, self.center.reshape((3,1))) + wT.reshape((3,1))
+        return wc[0,0], wc[1,0], self.angle
+
         
 
 
@@ -123,8 +128,8 @@ def get3DforMarker(marker_id, p0, p1, p2, p3, c):
     image_points = [p0,p1,p2,p3,c]
     (_, rvec, tvec) = cv2.solvePnP(np.array(model_points), np.array(image_points), g_K, np.array(g_D))
     rtheta = np.linalg.norm(rvec)
-    rdir = (rvec/rtheta)*np.sin(rtheta)
-    rquat = (rdir[0,0], rdir[1,0], rdir[2,0], np.cos(rtheta))
+    rdir = (rvec/rtheta)*np.sin(rtheta/2.0)
+    rquat = (rdir[0,0], rdir[1,0], rdir[2,0], np.cos(rtheta/2.0))
     br = tf.TransformBroadcaster()
     br.sendTransform((tvec[0,0], tvec[1,0], tvec[2,0]),
                      rquat,
@@ -181,16 +186,16 @@ def calibrate_AprilTags(atags):
         br.sendTransform((t[0], t[1], t[2]),
                         (q[0], q[1], q[2], q[3]),
                         rospy.Time.now(),
-                        'camera',
-                        "world")
+                        'camera', # From 
+                        "world")  # To
 
 def localize_AprilTags(atags):
     for atag in atags:
         if atag.id not in g_associations and atag.id==3:
-            atag.getWPose2D(g_R, g_t)
-            # msg = Pose2D(atag.center[0], atag.center[1], atag.angle)
-            # g_pub.publish(msg)
-            #print atag.angle, atag.center 
+            x,y,theta = atag.getWPose2D(g_R, g_t)
+            msg = Pose2D(x,y,theta)
+            g_pub.publish(msg)
+            print x,y,theta
 
 
 
@@ -198,15 +203,18 @@ def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(('192.168.10.119', 7709))
     rospy.init_node('ataglocalizer', anonymous=True)
+    rate = rospy.Rate(2)
+    prev_time = time.time()
     while not rospy.is_shutdown():
+        curr_time = time.time()
         message, address = server_socket.recvfrom(5*112)
-        byte_array = bytearray(message)
-        hexadecimal_string = binascii.hexlify(byte_array)
-	# print(len(hexadecimal_string))
-        atags = process_apriltag_msg(hexadecimal_string)
-        calibrate_AprilTags(atags)
-        localize_AprilTags(atags)
-
+        if(curr_time-prev_time > 1./2):
+            byte_array = bytearray(message)
+            hexadecimal_string = binascii.hexlify(byte_array)
+            atags = process_apriltag_msg(hexadecimal_string)
+            calibrate_AprilTags(atags)
+            localize_AprilTags(atags)
+            prev_time = time.time()
 
 main()
 
