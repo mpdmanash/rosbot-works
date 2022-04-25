@@ -62,11 +62,17 @@ g_t = np.zeros((3,))
 #                   4: (1.2,0.6,0.06),
 #                   1: (0.6,0.6,0.1)}
 
-ud = 0.6
-g_associations = {4: np.array([  3.0,-2.0, 0.169/ud  ])*ud,
-                  2: np.array([  0.0,0.0, 0.189/ud  ])*ud,
-                  5: np.array([  3.0,-1.0, 0.217/ud  ])*ud,
-                  1: np.array([  2.0,0.0, 0.185/ud  ])*ud}
+
+g_associations = {4: np.array([  2.489, -1.4, -0.03  ]),
+                  2: np.array([  -0.9, -0.14, -0.098  ]),
+                  5: np.array([  -1.32, 1.4, -0.09  ]),
+                  1: np.array([  0.94, -0.53, -0.09  ])}
+
+# ud = 0.6
+# g_associations = {4: np.array([  3.0,-2.0, 0.169/ud  ])*ud,
+#                   2: np.array([  0.0,0.0, 0.189/ud  ])*ud,
+#                   5: np.array([  3.0,-1.0, 0.217/ud  ])*ud,
+#                   1: np.array([  2.0,0.0, 0.185/ud  ])*ud}
 g_square_half_lengths = {4: 0.168/2.0,
                          2: 0.168/2.0,
                          5: 0.168/2.0,
@@ -195,7 +201,7 @@ def localize_AprilTags(atags):
             x,y,theta = atag.getWPose2D(g_R, g_t)
             msg = Pose2D(x,y,theta)
             g_pub.publish(msg)
-            print x,y,theta
+            # print x,y,theta
 
 
 
