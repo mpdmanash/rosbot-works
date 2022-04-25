@@ -18,7 +18,8 @@ class AprilTag:
 
     def computeAngle(self):
         D = self.p3-self.p2
-        self.angle = np.arccos(D[0]/np.linalg.norm(D))*180.0/np.pi
+        self.angle = -np.arctan2(-D[1],D[0])*180.0/np.pi
+        #self.angle = np.arccos(D[0]/np.linalg.norm(D))*180.0/np.pi
 
 
 
@@ -55,10 +56,10 @@ g_t = np.zeros((3,))
 #                   1: (0.6,0.6,0.1)}
 
 ud = 0.6
-g_associations = {5: np.array([  0.0,0.0, 0.12/ud  ])*ud,
-                  2: np.array([  2.0,-2.0, 0.125/ud  ])*ud,
-                  4: np.array([  1.0,-2.0, 0.06/ud  ])*ud,
-                  1: np.array([  3.0,1.0, 0.1/ud  ])*ud}
+g_associations = {4: np.array([  0.0,0.0, 0.169/ud  ])*ud,
+                  2: np.array([  2.0,0.0, 0.189/ud  ])*ud,
+                  5: np.array([  2.0,-2.0, 0.217/ud  ])*ud,
+                  1: np.array([  1.0,-2.0, 0.185/ud  ])*ud}
 
 g_pub = rospy.Publisher('atagpose', Pose2D, queue_size=1)
 
@@ -112,7 +113,7 @@ def process_apriltag_msg(hex_string):
     if(len(hex_string)>48): # April Tag Detected
 
         without_header = hex_string[48:]
-        print "Tags detected:", len(without_header)/(2*88)
+        #print "Tags detected:", len(without_header)/(2*88)
         for i in range(int(len(without_header)/(2*88))):
             tag_string = without_header[i*88*2:(i+1)*88*2]
             tag_id = int(read_part(tag_string, p_id), 16)
@@ -169,7 +170,7 @@ def localize_AprilTags(atags):
             atag.computeAngle()
             msg = Pose2D(atag.center[0], atag.center[1], atag.angle)
             g_pub.publish(msg)
-            print atag.angle, atag.center 
+            #print atag.angle, atag.center 
 
 
 
