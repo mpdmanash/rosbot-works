@@ -8,11 +8,17 @@ import time
 
 
 g_targets = [
-    (2.65, -1.95),
-    (1.55, -0.92),
-    (0.57, -0.85),
-    (-0.3, 0.11),
-    (-1.0, 1.12)    
+    (2.07, -0.775),
+    (1.714, -0.726),
+    (1.49, -0.58),
+    # (1.15, -0.455),
+    (0.925, -0.425),
+    (0.76, -0.32),
+    # (0.826, -0.285),
+    (0.6, -0.3),
+    (0.166, 0.57),
+    (0.13, 0.955),
+    (-0.404, 1.0355) 
 ]
 
 g_target_id = 0
@@ -30,7 +36,7 @@ g_delp_threshold = 0.05
 g_pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
 
 g_K_theta = 2.0
-g_K_x = 0.2
+g_K_x = 0.4
 
 def callback(data):
     global g_targets, g_K_theta, g_target_id
